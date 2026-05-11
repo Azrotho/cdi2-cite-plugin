@@ -1,0 +1,5 @@
+name: cdi2-cite-plugin
+version: 1.0.0
+main: fr.citedesiles.citeplugin.CitePlugin
+api-version: '1.21'
+author: Azrotho
