@@ -1,0 +1,7 @@
+# Configuration du plugin cite CDI2
+api:
+  url: "http://localhost:3000"
+  token: ""
+
+messages:
+  prefix: "&8[&bCDI2&8]&r"
