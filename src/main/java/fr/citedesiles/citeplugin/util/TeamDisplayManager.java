@@ -11,6 +11,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Scoreboard;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class TeamDisplayManager {
@@ -147,5 +150,84 @@ public final class TeamDisplayManager {
         } catch (Exception e) {
             return NamedTextColor.WHITE;
         }
+    }
+
+    /**
+     * Récupère toutes les équipes de l'API, les trie (staff d'abord, puis
+     * ordre alphabétique du tag), et ré-enregistre les scoreboard teams
+     * dans cet ordre pour un affichage groupé dans le tab.
+     */
+    public static void orderTeamsInScoreboard(CoreCDI api, JavaPlugin plugin) {
+        if (api == null) return;
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                List<Team> allTeams = api.getTeams();
+                if (allTeams == null || allTeams.isEmpty()) return;
+
+                // Trier : staff (staff=1) d'abord, puis ordre alpha du tag
+                List<Team> sorted = new ArrayList<>(allTeams);
+                sorted.sort((a, b) -> {
+                    if (a.staff() != b.staff()) {
+                        return a.staff() == 1 ? -1 : 1;
+                    }
+                    return a.tag().compareToIgnoreCase(b.tag());
+                });
+
+                // Sauvegarder les équipes des joueurs en ligne
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+
+                    // Capturer les CachedTeam des joueurs en ligne avant de supprimer les teams
+                    java.util.Map<java.util.UUID, CachedTeam> onlineTeams = new HashMap<>();
+                    for (org.bukkit.entity.Player online : Bukkit.getOnlinePlayers()) {
+                        CachedTeam ct = CACHE.get(online.getUniqueId());
+                        if (ct != null) {
+                            onlineTeams.put(online.getUniqueId(), ct);
+                        }
+                    }
+
+                    // Supprimer toutes les scoreboard teams CDI2 existantes
+                    for (org.bukkit.scoreboard.Team bt : scoreboard.getTeams()) {
+                        if (bt.getName().startsWith("team_")) {
+                            bt.unregister();
+                        }
+                    }
+
+                    // Recréer dans l'ordre trié
+                    for (Team team : sorted) {
+                        String teamName = "team_" + team.id();
+                        org.bukkit.scoreboard.Team boardTeam = scoreboard.registerNewTeam(teamName);
+                        TextColor teamHexColor = TextColor.fromHexString(team.color());
+                        NamedTextColor closestNamed = getClosestNamedColor(team.color());
+                        boardTeam.prefix(Component.text("[" + team.tag() + "] ", teamHexColor));
+                        boardTeam.color(closestNamed);
+                    }
+
+                    // Ré-ajouter les joueurs en ligne à leurs équipes et màj tab
+                    for (org.bukkit.entity.Player online : Bukkit.getOnlinePlayers()) {
+                        CachedTeam ct = onlineTeams.get(online.getUniqueId());
+                        if (ct != null) {
+                            for (Team team : sorted) {
+                                if (team.tag().equals(ct.tag) && team.color().equals(ct.color)) {
+                                    String teamName = "team_" + team.id();
+                                    org.bukkit.scoreboard.Team boardTeam = scoreboard.getTeam(teamName);
+                                    if (boardTeam != null) {
+                                        boardTeam.addEntry(online.getName());
+                                    }
+                                    TextColor hex = TextColor.fromHexString(team.color());
+                                    Component tabName = Component.text("[" + team.tag() + "] ", hex)
+                                            .append(Component.text(online.getName(), hex));
+                                    online.playerListName(tabName);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                // API inaccessible, on ignore
+            }
+        });
     }
 }
