@@ -39,6 +39,10 @@ public class PluginConfig {
         return col(config.getString("messages.prefix", "&8[&bCDI2&8]&r"));
     }
 
+    public String getSidebarTitle() {
+        return col(config.getString("messages.sidebar-title", "CDI2"));
+    }
+
     // --- Interne ---
 
     private String msg(String path) {
