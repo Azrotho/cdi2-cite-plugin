@@ -21,10 +21,12 @@ public final class TeamDisplayManager {
     public static class CachedTeam {
         public final String tag;
         public final String color;
+        public final boolean isStaff;
 
-        public CachedTeam(String tag, String color) {
+        public CachedTeam(String tag, String color, boolean isStaff) {
             this.tag = tag;
             this.color = color;
+            this.isStaff = isStaff;
         }
     }
 
@@ -53,7 +55,7 @@ public final class TeamDisplayManager {
                     Team team = api.getTeam(apiPlayer.team());
 
                     // Put in local cache
-                    CACHE.put(player.getUniqueId(), new CachedTeam(team.tag(), team.color()));
+                    CACHE.put(player.getUniqueId(), new CachedTeam(team.tag(), team.color(), team.staff() == 1));
 
                     TextColor teamHexColor = TextColor.fromHexString(team.color());
                     NamedTextColor closestNamed = getClosestNamedColor(team.color());
@@ -68,13 +70,22 @@ public final class TeamDisplayManager {
                         }
 
                         // Prefix in scoreboard team
-                        boardTeam.prefix(Component.text("[" + team.tag() + "] ", teamHexColor));
+                        Component scoreboardPrefix = Component.text("[" + team.tag() + "] ", teamHexColor);
+                        if (team.staff() == 1) {
+                            scoreboardPrefix = scoreboardPrefix.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                        }
+                        boardTeam.prefix(scoreboardPrefix);
                         boardTeam.color(closestNamed);
                         boardTeam.addEntry(player.getName());
 
                         // Tab name
-                        Component tabName = Component.text("[" + team.tag() + "] ", teamHexColor)
-                                .append(Component.text(player.getName(), teamHexColor));
+                        Component prefixComp = Component.text("[" + team.tag() + "] ", teamHexColor);
+                        Component playerComp = Component.text(player.getName(), teamHexColor);
+                        if (team.staff() == 1) {
+                            prefixComp = prefixComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                            playerComp = playerComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                        }
+                        Component tabName = prefixComp.append(playerComp);
                         player.playerListName(tabName);
                     });
                 } else {
@@ -200,7 +211,11 @@ public final class TeamDisplayManager {
                         org.bukkit.scoreboard.Team boardTeam = scoreboard.registerNewTeam(teamName);
                         TextColor teamHexColor = TextColor.fromHexString(team.color());
                         NamedTextColor closestNamed = getClosestNamedColor(team.color());
-                        boardTeam.prefix(Component.text("[" + team.tag() + "] ", teamHexColor));
+                        Component scoreboardPrefix = Component.text("[" + team.tag() + "] ", teamHexColor);
+                        if (team.staff() == 1) {
+                            scoreboardPrefix = scoreboardPrefix.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                        }
+                        boardTeam.prefix(scoreboardPrefix);
                         boardTeam.color(closestNamed);
                     }
 
@@ -216,8 +231,13 @@ public final class TeamDisplayManager {
                                         boardTeam.addEntry(online.getName());
                                     }
                                     TextColor hex = TextColor.fromHexString(team.color());
-                                    Component tabName = Component.text("[" + team.tag() + "] ", hex)
-                                            .append(Component.text(online.getName(), hex));
+                                    Component prefixComp = Component.text("[" + team.tag() + "] ", hex);
+                                    Component playerComp = Component.text(online.getName(), hex);
+                                    if (team.staff() == 1) {
+                                        prefixComp = prefixComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                                        playerComp = playerComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                                    }
+                                    Component tabName = prefixComp.append(playerComp);
                                     online.playerListName(tabName);
                                     break;
                                 }

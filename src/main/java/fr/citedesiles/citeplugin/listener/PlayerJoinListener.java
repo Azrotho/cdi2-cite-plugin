@@ -61,9 +61,15 @@ public class PlayerJoinListener implements Listener {
                         try {
                             fr.citedesiles.coreplugin.Team team = api.getTeam(apiPlayer.team());
                             TextColor teamColor = TextColor.fromHexString(team.color());
+                            Component tagComp = Component.text("[" + team.tag() + "] ", teamColor);
+                            Component nameComp = Component.text(player.getName(), teamColor);
+                            if (team.staff() == 1) {
+                                tagComp = tagComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                                nameComp = nameComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                            }
                             joinMsg = Component.text("(+) ", NamedTextColor.GREEN)
-                                    .append(Component.text("[" + team.tag() + "] ", teamColor))
-                                    .append(Component.text(player.getName(), teamColor));
+                                    .append(tagComp)
+                                    .append(nameComp);
                         } catch (Exception e) {
                             // Si la team n'est pas trouvable, fallback sans tag
                         }
@@ -106,6 +112,10 @@ public class PlayerJoinListener implements Listener {
             TextColor teamColor = TextColor.fromHexString(team.color);
             tagComp = Component.text("[" + team.tag + "] ", teamColor);
             nameComp = Component.text(player.getName(), teamColor);
+            if (team.isStaff) {
+                tagComp = tagComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                nameComp = nameComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+            }
         }
 
         Component quitMsg = quitPrefix.append(tagComp).append(nameComp);

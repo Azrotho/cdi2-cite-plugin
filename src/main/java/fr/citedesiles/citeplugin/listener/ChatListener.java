@@ -28,13 +28,19 @@ public class ChatListener implements Listener {
 
                 Component prefix = Component.empty();
                 TextColor nameColor = NamedTextColor.YELLOW;
+                boolean isStaff = false;
                 if (team != null) {
                     TextColor teamHexColor = TextColor.fromHexString(team.color);
                     prefix = Component.text("[" + team.tag + "] ", teamHexColor);
                     nameColor = teamHexColor;
+                    isStaff = team.isStaff;
                 }
 
                 Component displayName = Component.text(source.getName(), nameColor);
+                if (isStaff) {
+                    prefix = prefix.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                    displayName = displayName.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                }
                 Component separator = Component.text(" >> ", NamedTextColor.YELLOW);
 
                 // Formater le message
@@ -42,14 +48,28 @@ public class ChatListener implements Listener {
                 if (source.isOp()) {
                     // Traduire les codes de couleur & si OP
                     String rawMsg = PlainTextComponentSerializer.plainText().serialize(message);
-                    messageFormatted = LegacyComponentSerializer.legacyAmpersand().deserialize(rawMsg)
-                            .color(NamedTextColor.WHITE);
+                    Component deserialized = LegacyComponentSerializer.legacyAmpersand().deserialize(rawMsg);
+                    if (isStaff && !rawMsg.matches(".*&[0-9a-fA-Fk-oK-OrR].*")) {
+                        deserialized = deserialized.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                    }
+                    messageFormatted = Component.text()
+                            .color(NamedTextColor.WHITE)
+                            .append(deserialized)
+                            .build();
                 } else {
                     // Joueur normal : forcer en blanc
                     messageFormatted = message.color(NamedTextColor.WHITE);
+                    if (isStaff) {
+                        messageFormatted = messageFormatted.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                    }
                 }
 
-                return prefix.append(displayName).append(separator).append(messageFormatted);
+                return Component.text()
+                        .append(prefix)
+                        .append(displayName)
+                        .append(separator)
+                        .append(messageFormatted)
+                        .build();
             }
         });
     }
