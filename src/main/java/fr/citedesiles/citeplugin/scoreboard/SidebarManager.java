@@ -65,6 +65,7 @@ public class SidebarManager {
      */
     public void createScoreboard(Player player) {
         Scoreboard scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        TeamDisplayManager.setupTeamsOnScoreboard(scoreboard);
         Component titleComp = title.contains("§") || title.contains("&")
                 ? LegacyComponentSerializer.legacySection().deserialize(title)
                 : Component.text(title, NamedTextColor.GOLD);

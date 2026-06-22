@@ -7,14 +7,19 @@ import fr.citedesiles.citeplugin.CitePlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.Scoreboard;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class TeamDisplayManager {
 
@@ -22,24 +27,64 @@ public final class TeamDisplayManager {
         public final String tag;
         public final String color;
         public final boolean isStaff;
+        public final int teamId;
 
-        public CachedTeam(String tag, String color, boolean isStaff) {
+        public CachedTeam(String tag, String color, boolean isStaff, int teamId) {
             this.tag = tag;
             this.color = color;
             this.isStaff = isStaff;
+            this.teamId = teamId;
         }
     }
 
-    private static final Map<java.util.UUID, CachedTeam> CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<UUID, CachedTeam> CACHE = new ConcurrentHashMap<>();
 
     private TeamDisplayManager() {}
 
-    public static CachedTeam getCachedTeam(java.util.UUID uuid) {
+    public static CachedTeam getCachedTeam(UUID uuid) {
         return CACHE.get(uuid);
     }
 
-    public static void removeCachedTeam(java.util.UUID uuid) {
+    public static void removeCachedTeam(UUID uuid) {
         CACHE.remove(uuid);
+    }
+
+    public static String getScoreboardTeamName(fr.citedesiles.coreplugin.Team team) {
+        String prefix = (team.staff() == 1) ? "a_" : "b_";
+        return prefix + team.tag().toLowerCase() + "_" + team.id();
+    }
+
+    public static String getScoreboardTeamName(String tag, boolean isStaff, int teamId) {
+        String prefix = isStaff ? "a_" : "b_";
+        return prefix + tag.toLowerCase() + "_" + teamId;
+    }
+
+    public static void setupTeamsOnScoreboard(Scoreboard newScoreboard) {
+        Scoreboard mainScoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+        for (org.bukkit.scoreboard.Team mainTeam : mainScoreboard.getTeams()) {
+            String name = mainTeam.getName();
+            if (name.startsWith("a_") || name.startsWith("b_") || name.startsWith("team_")) {
+                org.bukkit.scoreboard.Team newTeam = newScoreboard.getTeam(name);
+                if (newTeam == null) {
+                    newTeam = newScoreboard.registerNewTeam(name);
+                }
+                newTeam.prefix(mainTeam.prefix());
+                TextColor tc = mainTeam.color();
+                if (tc instanceof NamedTextColor) {
+                    newTeam.color((NamedTextColor) tc);
+                }
+                newTeam.suffix(mainTeam.suffix());
+                newTeam.displayName(mainTeam.displayName());
+                newTeam.setAllowFriendlyFire(mainTeam.allowFriendlyFire());
+                newTeam.setCanSeeFriendlyInvisibles(mainTeam.canSeeFriendlyInvisibles());
+                newTeam.setOption(org.bukkit.scoreboard.Team.Option.COLLISION_RULE, mainTeam.getOption(org.bukkit.scoreboard.Team.Option.COLLISION_RULE));
+                newTeam.setOption(org.bukkit.scoreboard.Team.Option.NAME_TAG_VISIBILITY, mainTeam.getOption(org.bukkit.scoreboard.Team.Option.NAME_TAG_VISIBILITY));
+                
+                for (String entry : mainTeam.getEntries()) {
+                    newTeam.addEntry(entry);
+                }
+            }
+        }
     }
 
     public static void updateDisplay(org.bukkit.entity.Player player, CoreCDI api) {
@@ -53,39 +98,49 @@ public final class TeamDisplayManager {
                 Player apiPlayer = api.getPlayer(player.getUniqueId().toString());
                 if (apiPlayer.team() != -1) {
                     Team team = api.getTeam(apiPlayer.team());
-
+                    
                     // Put in local cache
-                    CACHE.put(player.getUniqueId(), new CachedTeam(team.tag(), team.color(), team.staff() == 1));
+                    CACHE.put(player.getUniqueId(), new CachedTeam(team.tag(), team.color(), team.staff() == 1, team.id()));
 
                     TextColor teamHexColor = TextColor.fromHexString(team.color());
                     NamedTextColor closestNamed = getClosestNamedColor(team.color());
 
+                    Component scoreboardPrefix = Component.text("[" + team.tag() + "] ", teamHexColor);
+                    if (team.staff() == 1) {
+                        scoreboardPrefix = scoreboardPrefix.decorate(TextDecoration.BOLD);
+                    }
+                    Component prefixComp = Component.text("[" + team.tag() + "] ", teamHexColor);
+                    Component playerComp = Component.text(player.getName(), teamHexColor);
+                    if (team.staff() == 1) {
+                        prefixComp = prefixComp.decorate(TextDecoration.BOLD);
+                        playerComp = playerComp.decorate(TextDecoration.BOLD);
+                    }
+                    Component tabName = prefixComp.append(playerComp);
+                    final Component finalScoreboardPrefix = scoreboardPrefix;
+
                     // Run sync to update Scoreboard and Tab
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
-                        String teamName = "team_" + team.id();
-                        org.bukkit.scoreboard.Team boardTeam = scoreboard.getTeam(teamName);
-                        if (boardTeam == null) {
-                            boardTeam = scoreboard.registerNewTeam(teamName);
+                        Set<Scoreboard> scoreboards = new HashSet<>();
+                        scoreboards.add(Bukkit.getScoreboardManager().getMainScoreboard());
+                        for (org.bukkit.entity.Player online : Bukkit.getOnlinePlayers()) {
+                            scoreboards.add(online.getScoreboard());
                         }
 
-                        // Prefix in scoreboard team
-                        Component scoreboardPrefix = Component.text("[" + team.tag() + "] ", teamHexColor);
-                        if (team.staff() == 1) {
-                            scoreboardPrefix = scoreboardPrefix.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                        String teamName = getScoreboardTeamName(team);
+
+                        for (Scoreboard scoreboard : scoreboards) {
+                            org.bukkit.scoreboard.Team boardTeam = scoreboard.getTeam(teamName);
+                            if (boardTeam == null) {
+                                boardTeam = scoreboard.registerNewTeam(teamName);
+                            }
+
+                            // Prefix in scoreboard team
+                            boardTeam.prefix(finalScoreboardPrefix);
+                            boardTeam.color(closestNamed);
+                            boardTeam.addEntry(player.getName());
                         }
-                        boardTeam.prefix(scoreboardPrefix);
-                        boardTeam.color(closestNamed);
-                        boardTeam.addEntry(player.getName());
 
                         // Tab name
-                        Component prefixComp = Component.text("[" + team.tag() + "] ", teamHexColor);
-                        Component playerComp = Component.text(player.getName(), teamHexColor);
-                        if (team.staff() == 1) {
-                            prefixComp = prefixComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
-                            playerComp = playerComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
-                        }
-                        Component tabName = prefixComp.append(playerComp);
                         player.playerListName(tabName);
                     });
                 } else {
@@ -93,10 +148,17 @@ public final class TeamDisplayManager {
                     CACHE.remove(player.getUniqueId());
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
-                        org.bukkit.scoreboard.Team boardTeam = scoreboard.getEntryTeam(player.getName());
-                        if (boardTeam != null) {
-                            boardTeam.removeEntry(player.getName());
+                        Set<Scoreboard> scoreboards = new HashSet<>();
+                        scoreboards.add(Bukkit.getScoreboardManager().getMainScoreboard());
+                        for (org.bukkit.entity.Player online : Bukkit.getOnlinePlayers()) {
+                            scoreboards.add(online.getScoreboard());
+                        }
+
+                        for (Scoreboard scoreboard : scoreboards) {
+                            org.bukkit.scoreboard.Team boardTeam = scoreboard.getEntryTeam(player.getName());
+                            if (boardTeam != null) {
+                                boardTeam.removeEntry(player.getName());
+                            }
                         }
                         player.playerListName(null); // Reset tab name
                     });
@@ -106,10 +168,17 @@ public final class TeamDisplayManager {
                 CACHE.remove(player.getUniqueId());
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
-                    org.bukkit.scoreboard.Team boardTeam = scoreboard.getEntryTeam(player.getName());
-                    if (boardTeam != null) {
-                        boardTeam.removeEntry(player.getName());
+                    Set<Scoreboard> scoreboards = new HashSet<>();
+                    scoreboards.add(Bukkit.getScoreboardManager().getMainScoreboard());
+                    for (org.bukkit.entity.Player online : Bukkit.getOnlinePlayers()) {
+                        scoreboards.add(online.getScoreboard());
+                    }
+
+                    for (Scoreboard scoreboard : scoreboards) {
+                        org.bukkit.scoreboard.Team boardTeam = scoreboard.getEntryTeam(player.getName());
+                        if (boardTeam != null) {
+                            boardTeam.removeEntry(player.getName());
+                        }
                     }
                     player.playerListName(null);
                 });
@@ -187,10 +256,14 @@ public final class TeamDisplayManager {
 
                 // Sauvegarder les équipes des joueurs en ligne
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+                    Set<Scoreboard> scoreboards = new HashSet<>();
+                    scoreboards.add(Bukkit.getScoreboardManager().getMainScoreboard());
+                    for (org.bukkit.entity.Player online : Bukkit.getOnlinePlayers()) {
+                        scoreboards.add(online.getScoreboard());
+                    }
 
                     // Capturer les CachedTeam des joueurs en ligne avant de supprimer les teams
-                    java.util.Map<java.util.UUID, CachedTeam> onlineTeams = new HashMap<>();
+                    Map<UUID, CachedTeam> onlineTeams = new HashMap<>();
                     for (org.bukkit.entity.Player online : Bukkit.getOnlinePlayers()) {
                         CachedTeam ct = CACHE.get(online.getUniqueId());
                         if (ct != null) {
@@ -198,50 +271,49 @@ public final class TeamDisplayManager {
                         }
                     }
 
-                    // Supprimer toutes les scoreboard teams CDI2 existantes
-                    for (org.bukkit.scoreboard.Team bt : scoreboard.getTeams()) {
-                        if (bt.getName().startsWith("team_")) {
-                            bt.unregister();
+                    for (Scoreboard sb : scoreboards) {
+                        // Supprimer toutes les scoreboard teams CDI2 existantes
+                        for (org.bukkit.scoreboard.Team bt : new ArrayList<>(sb.getTeams())) {
+                            if (bt.getName().startsWith("a_") || bt.getName().startsWith("b_") || bt.getName().startsWith("team_")) {
+                                bt.unregister();
+                            }
                         }
-                    }
 
-                    // Recréer dans l'ordre trié
-                    for (Team team : sorted) {
-                        String teamName = "team_" + team.id();
-                        org.bukkit.scoreboard.Team boardTeam = scoreboard.registerNewTeam(teamName);
-                        TextColor teamHexColor = TextColor.fromHexString(team.color());
-                        NamedTextColor closestNamed = getClosestNamedColor(team.color());
-                        Component scoreboardPrefix = Component.text("[" + team.tag() + "] ", teamHexColor);
-                        if (team.staff() == 1) {
-                            scoreboardPrefix = scoreboardPrefix.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+                        // Recréer dans l'ordre trié
+                        for (Team team : sorted) {
+                            String teamName = getScoreboardTeamName(team);
+                            org.bukkit.scoreboard.Team boardTeam = sb.registerNewTeam(teamName);
+                            TextColor teamHexColor = TextColor.fromHexString(team.color());
+                            NamedTextColor closestNamed = getClosestNamedColor(team.color());
+                            Component scoreboardPrefix = Component.text("[" + team.tag() + "] ", teamHexColor);
+                            if (team.staff() == 1) {
+                                scoreboardPrefix = scoreboardPrefix.decorate(TextDecoration.BOLD);
+                            }
+                            boardTeam.prefix(scoreboardPrefix);
+                            boardTeam.color(closestNamed);
                         }
-                        boardTeam.prefix(scoreboardPrefix);
-                        boardTeam.color(closestNamed);
                     }
 
                     // Ré-ajouter les joueurs en ligne à leurs équipes et màj tab
                     for (org.bukkit.entity.Player online : Bukkit.getOnlinePlayers()) {
                         CachedTeam ct = onlineTeams.get(online.getUniqueId());
                         if (ct != null) {
-                            for (Team team : sorted) {
-                                if (team.tag().equals(ct.tag) && team.color().equals(ct.color)) {
-                                    String teamName = "team_" + team.id();
-                                    org.bukkit.scoreboard.Team boardTeam = scoreboard.getTeam(teamName);
-                                    if (boardTeam != null) {
-                                        boardTeam.addEntry(online.getName());
-                                    }
-                                    TextColor hex = TextColor.fromHexString(team.color());
-                                    Component prefixComp = Component.text("[" + team.tag() + "] ", hex);
-                                    Component playerComp = Component.text(online.getName(), hex);
-                                    if (team.staff() == 1) {
-                                        prefixComp = prefixComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
-                                        playerComp = playerComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
-                                    }
-                                    Component tabName = prefixComp.append(playerComp);
-                                    online.playerListName(tabName);
-                                    break;
+                            String teamName = getScoreboardTeamName(ct.tag, ct.isStaff, ct.teamId);
+                            for (Scoreboard sb : scoreboards) {
+                                org.bukkit.scoreboard.Team boardTeam = sb.getTeam(teamName);
+                                if (boardTeam != null) {
+                                    boardTeam.addEntry(online.getName());
                                 }
                             }
+                            TextColor hex = TextColor.fromHexString(ct.color);
+                            Component prefixComp = Component.text("[" + ct.tag + "] ", hex);
+                            Component playerComp = Component.text(online.getName(), hex);
+                            if (ct.isStaff) {
+                                prefixComp = prefixComp.decorate(TextDecoration.BOLD);
+                                playerComp = playerComp.decorate(TextDecoration.BOLD);
+                            }
+                            Component tabName = prefixComp.append(playerComp);
+                            online.playerListName(tabName);
                         }
                     }
                 });
