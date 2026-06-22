@@ -133,10 +133,14 @@ public class SidebarManager {
             TextColor teamColor = TextColor.fromHexString(team.color());
             if (teamColor == null) teamColor = NamedTextColor.YELLOW;
 
-            setLine(player, Component.text(player.getName(), teamColor), 13);
-            setLine(player, Component.text(team.name(), teamColor), 10);
+            setLine(player, Component.text(player.getName(), NamedTextColor.WHITE), 13);
+            Component teamNameComp = Component.text(team.name(), teamColor);
+            if (team.staff() == 1) {
+                teamNameComp = teamNameComp.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
+            }
+            setLine(player, teamNameComp, 10);
         } else {
-            setLine(player, Component.text(player.getName(), NamedTextColor.YELLOW), 13);
+            setLine(player, Component.text(player.getName(), NamedTextColor.WHITE), 13);
             setLine(player, Component.text("Aucune", NamedTextColor.YELLOW), 10);
         }
 
