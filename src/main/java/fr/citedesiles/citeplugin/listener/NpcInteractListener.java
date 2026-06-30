@@ -284,6 +284,11 @@ public class NpcInteractListener implements Listener {
                             }
                         }
                     }
+
+                    // Rafraîchir instantanément le classement principal géant (TextDisplay)
+                    if (plugin.getLeaderboardManager() != null) {
+                        plugin.getLeaderboardManager().runUpdate();
+                    }
                 });
 
             } catch (Exception e) {

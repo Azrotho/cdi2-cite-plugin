@@ -47,7 +47,7 @@ public class LeaderboardManager {
         }
     }
 
-    private void runUpdate() {
+    public void runUpdate() {
         if (api == null) return;
 
         // Récupérer la liste des équipes et leurs scores de manière asynchrone
