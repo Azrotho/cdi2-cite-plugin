@@ -51,3 +51,185 @@ npcs:
       yaw: 0.0
       pitch: 0.0
     message: "<white>Bonjour j'aime les </white><#ffb3c1>sushis</#ffb3c1>"
+  - id: "Agriculteur"
+    type: "economy"
+    name: "&aAgriculteur"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce1"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 20.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Aventurier"
+    type: "economy"
+    name: "&aAventurier"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce2"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 25.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Bucheron"
+    type: "economy"
+    name: "&aBucheron"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce3"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 35.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Copper"
+    type: "economy"
+    name: "&aCopper"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce4"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 40.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Couleur"
+    type: "economy"
+    name: "&aCouleur"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce5"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 45.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Décoration"
+    type: "economy"
+    name: "&aDécoration"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce6"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 50.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "End"
+    type: "economy"
+    name: "&aEnd"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce7"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 55.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Hiver"
+    type: "economy"
+    name: "&aHiver"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce8"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 60.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Nether"
+    type: "economy"
+    name: "&aNether"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ce9"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 65.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Océan"
+    type: "economy"
+    name: "&aOcéan"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0cea"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 70.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Restone"
+    type: "economy"
+    name: "&aRestone"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ceb"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 75.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Trésor"
+    type: "economy"
+    name: "&aTrésor"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0cec"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 80.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Warden"
+    type: "economy"
+    name: "&aWarden"
+    uuid: "a1ec607c-9a4f-40e9-8260-ef024e0f0ced"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 85.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
