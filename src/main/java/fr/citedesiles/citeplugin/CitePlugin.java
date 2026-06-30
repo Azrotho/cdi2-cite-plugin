@@ -9,6 +9,7 @@ import fr.citedesiles.citeplugin.scoreboard.SidebarManager;
 import fr.citedesiles.citeplugin.util.TeamDisplayManager;
 import fr.citedesiles.citeplugin.npc.NpcRegistry;
 import fr.citedesiles.citeplugin.command.NpcAdminCommand;
+import fr.citedesiles.citeplugin.leaderboard.LeaderboardManager;
 
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.objects.NpcConfig;
@@ -20,6 +21,7 @@ public class CitePlugin extends JavaPlugin {
     private CoreCDI api;
     private SidebarManager sidebarManager;
     private NpcRegistry npcRegistry;
+    private LeaderboardManager leaderboardManager;
 
     @Override
     public void onEnable() {
@@ -41,6 +43,10 @@ public class CitePlugin extends JavaPlugin {
                     sidebarManager = new SidebarManager(api, this, config.getSidebarTitle());
                     sidebarManager.startFooterRotation();
                     sidebarManager.startDataRefresh();
+
+                    // Initialiser et démarrer le classement géant
+                    leaderboardManager = new LeaderboardManager(this, api);
+                    leaderboardManager.startUpdateTask();
                 }
             } catch (CoreCDI.ApiException e) {
                 getLogger().warning("Impossible de contacter l'API CDI2 : " + e.getMessage());
@@ -74,6 +80,11 @@ public class CitePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Arrêter proprement le leaderboard
+        if (leaderboardManager != null) {
+            leaderboardManager.stopUpdateTask();
+        }
+
         // Désactiver proprement l'API NPC
         NpcApi.disable();
         getLogger().info("CitePlugin désactivé !");
@@ -93,5 +104,9 @@ public class CitePlugin extends JavaPlugin {
 
     public NpcRegistry getNpcRegistry() {
         return npcRegistry;
+    }
+
+    public LeaderboardManager getLeaderboardManager() {
+        return leaderboardManager;
     }
 }

@@ -49,16 +49,16 @@ public class SidebarManager {
         Bukkit.getScheduler().runTaskTimer(plugin, this::rotateFooter, 0L, 600L); // 30s = 600 ticks
     }
 
-    /**
-     * Démarre le rafraîchissement périodique des données (toutes les 60 secondes).
-     */
-    public void startDataRefresh() {
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                refreshPlayerData(player);
-            }
-        }, 1200L, 1200L); // 60s = 1200 ticks
-    }
+     /**
+      * Démarre le rafraîchissement périodique des données (toutes les 10 secondes).
+      */
+     public void startDataRefresh() {
+         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+             for (Player player : Bukkit.getOnlinePlayers()) {
+                 refreshPlayerData(player);
+             }
+         }, 200L, 200L); // 10s = 200 ticks
+     }
 
     /**
      * Crée le scoreboard d'un joueur et lance la récupération async de ses données.
