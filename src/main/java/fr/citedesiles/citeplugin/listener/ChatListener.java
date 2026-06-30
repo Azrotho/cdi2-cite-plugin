@@ -46,10 +46,14 @@ public class ChatListener implements Listener {
                 // Formater le message
                 Component messageFormatted;
                 if (source.isOp()) {
-                    // Traduire les codes de couleur & si OP
                     String rawMsg = PlainTextComponentSerializer.plainText().serialize(message);
-                    Component deserialized = LegacyComponentSerializer.legacyAmpersand().deserialize(rawMsg);
-                    if (isStaff && !rawMsg.matches(".*&[0-9a-fA-Fk-oK-OrR].*")) {
+                    Component deserialized;
+                    if (rawMsg.contains("<") && rawMsg.contains(">")) {
+                        deserialized = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(rawMsg);
+                    } else {
+                        deserialized = LegacyComponentSerializer.legacyAmpersand().deserialize(rawMsg);
+                    }
+                    if (isStaff && !rawMsg.matches(".*&[0-9a-fA-Fk-oK-OrR].*") && !rawMsg.contains("<")) {
                         deserialized = deserialized.decorate(net.kyori.adventure.text.format.TextDecoration.BOLD);
                     }
                     messageFormatted = Component.text()
