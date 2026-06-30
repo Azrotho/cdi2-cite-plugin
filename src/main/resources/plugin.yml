@@ -3,3 +3,8 @@ version: 1.0.0
 main: fr.citedesiles.citeplugin.CitePlugin
 api-version: '1.21'
 author: Azrotho
+commands:
+  cite-npc:
+    description: Control Cite NPCs
+    permission: cite.npc.admin
+    usage: /cite-npc [setlocation|reload]

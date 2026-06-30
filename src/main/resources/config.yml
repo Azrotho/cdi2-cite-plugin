@@ -6,3 +6,48 @@ api:
 messages:
   prefix: "&8[&bCDI2&8]&r"
   sidebar-title: "&6&lCDI2"
+
+npcs:
+  - id: "Mineur"
+    type: "economy"
+    name: "&aMineur"
+    uuid: "c0ec607c-9a4f-40e9-8260-ef024e0f0cd2"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 0.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Forgeron"
+    type: "economy"
+    name: "&aForgeron"
+    uuid: "f0ec607c-9a4f-40e9-8260-ef024e0f0cd3"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: 10.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+  - id: "Azrotho"
+    type: "message"
+    name: "&bAzrotho"
+    uuid: "a0ec607c-9a4f-40e9-8260-ef024e0f0cd4"
+    skin:
+      value: ""
+      signature: ""
+    location:
+      world: "world"
+      x: -10.0
+      y: 90.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+    message: "<white>Bonjour j'aime les </white><#ffb3c1>sushis</#ffb3c1>"
