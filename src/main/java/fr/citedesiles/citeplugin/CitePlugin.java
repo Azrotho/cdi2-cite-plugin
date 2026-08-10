@@ -10,6 +10,8 @@ import fr.citedesiles.citeplugin.util.TeamDisplayManager;
 import fr.citedesiles.citeplugin.npc.NpcRegistry;
 import fr.citedesiles.citeplugin.command.NpcAdminCommand;
 import fr.citedesiles.citeplugin.leaderboard.LeaderboardManager;
+import fr.citedesiles.citeplugin.leaderboard.HeadLeaderboardManager;
+import fr.citedesiles.citeplugin.listener.HeadInteractListener;
 
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.objects.NpcConfig;
@@ -22,6 +24,7 @@ public class CitePlugin extends JavaPlugin {
     private SidebarManager sidebarManager;
     private NpcRegistry npcRegistry;
     private LeaderboardManager leaderboardManager;
+    private HeadLeaderboardManager headLeaderboardManager;
 
     @Override
     public void onEnable() {
@@ -47,6 +50,10 @@ public class CitePlugin extends JavaPlugin {
                     // Initialiser et démarrer le classement géant
                     leaderboardManager = new LeaderboardManager(this, api);
                     leaderboardManager.startUpdateTask();
+
+                    // Initialiser et démarrer le classement des têtes secrètes
+                    headLeaderboardManager = new HeadLeaderboardManager(this, api);
+                    headLeaderboardManager.startUpdateTask();
                 }
             } catch (CoreCDI.ApiException e) {
                 getLogger().warning("Impossible de contacter l'API CDI2 : " + e.getMessage());
@@ -66,6 +73,7 @@ public class CitePlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(api, config), this);
         getServer().getPluginManager().registerEvents(new ChatListener(), this);
         getServer().getPluginManager().registerEvents(new NpcInteractListener(this, api, npcRegistry), this);
+        getServer().getPluginManager().registerEvents(new HeadInteractListener(this, api), this);
 
         // Enregistrer les commandes
         NpcAdminCommand npcAdminCommand = new NpcAdminCommand(npcRegistry);
@@ -83,6 +91,9 @@ public class CitePlugin extends JavaPlugin {
         // Arrêter proprement le leaderboard
         if (leaderboardManager != null) {
             leaderboardManager.stopUpdateTask();
+        }
+        if (headLeaderboardManager != null) {
+            headLeaderboardManager.stopUpdateTask();
         }
 
         // Désactiver proprement l'API NPC
@@ -108,5 +119,9 @@ public class CitePlugin extends JavaPlugin {
 
     public LeaderboardManager getLeaderboardManager() {
         return leaderboardManager;
+    }
+
+    public HeadLeaderboardManager getHeadLeaderboardManager() {
+        return headLeaderboardManager;
     }
 }
