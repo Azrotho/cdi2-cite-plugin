@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.Plugin;
 
 import java.util.HashSet;
@@ -23,6 +24,8 @@ public class HeadInteractListener implements Listener {
     private final Plugin plugin;
     // Cache des têtes trouvées par équipe: Map<teamId, Set<"x,y,z">>
     private final Map<Integer, Set<String>> teamHeadsCache = new ConcurrentHashMap<>();
+    // Set des requêtes en cours de traitement pour éviter le spam de clics simultanés: Set<"uuid_x,y,z">
+    private final Set<String> pendingClicks = ConcurrentHashMap.newKeySet();
 
     public HeadInteractListener(Plugin plugin, CoreCDI api) {
         this.plugin = plugin;
@@ -31,6 +34,11 @@ public class HeadInteractListener implements Listener {
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
+        // Ignorer l'évènement de la main secondaire pour éviter le déclenchement en double par Bukkit
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+
         Block block = event.getClickedBlock();
         if (block == null) {
             return;
@@ -48,6 +56,12 @@ public class HeadInteractListener implements Listener {
             int y = block.getY();
             int z = block.getZ();
             String coordKey = x + "," + y + "," + z;
+            String pendingKey = player.getUniqueId() + "_" + coordKey;
+
+            // Si un clic sur cette tête par ce joueur est déjà en cours de traitement asynchrone, ignorer
+            if (!pendingClicks.add(pendingKey)) {
+                return;
+            }
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                 try {
@@ -91,6 +105,8 @@ public class HeadInteractListener implements Listener {
                     }
                 } catch (Exception e) {
                     plugin.getLogger().warning("Erreur lors de la vérification de la tête secrète: " + e.getMessage());
+                } finally {
+                    pendingClicks.remove(pendingKey);
                 }
             });
         }

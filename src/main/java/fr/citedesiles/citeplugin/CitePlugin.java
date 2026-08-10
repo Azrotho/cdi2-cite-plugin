@@ -11,11 +11,21 @@ import fr.citedesiles.citeplugin.npc.NpcRegistry;
 import fr.citedesiles.citeplugin.command.NpcAdminCommand;
 import fr.citedesiles.citeplugin.leaderboard.LeaderboardManager;
 import fr.citedesiles.citeplugin.leaderboard.HeadLeaderboardManager;
+import fr.citedesiles.citeplugin.leaderboard.StatFormatters;
+import fr.citedesiles.citeplugin.leaderboard.StatLeaderboardManager;
 import fr.citedesiles.citeplugin.listener.HeadInteractListener;
+import fr.citedesiles.citeplugin.stats.StatBuffer;
+import fr.citedesiles.citeplugin.stats.StatsListener;
 
 import de.eisi05.npc.api.NpcApi;
 import de.eisi05.npc.api.objects.NpcConfig;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class CitePlugin extends JavaPlugin {
 
@@ -25,6 +35,8 @@ public class CitePlugin extends JavaPlugin {
     private NpcRegistry npcRegistry;
     private LeaderboardManager leaderboardManager;
     private HeadLeaderboardManager headLeaderboardManager;
+    private StatBuffer statBuffer;
+    private final List<StatLeaderboardManager> statLeaderboards = new ArrayList<>();
 
     @Override
     public void onEnable() {
@@ -54,6 +66,26 @@ public class CitePlugin extends JavaPlugin {
                     // Initialiser et démarrer le classement des têtes secrètes
                     headLeaderboardManager = new HeadLeaderboardManager(this, api);
                     headLeaderboardManager.startUpdateTask();
+
+                    // Initialiser le tracking de stats
+                    statBuffer = new StatBuffer(this, api);
+                    statBuffer.start();
+                    getServer().getPluginManager().registerEvents(new StatsListener(statBuffer), this);
+
+                    // Initialiser les classements secondaires par stats (axe 0, à la suite des PNJ)
+                    World world = Bukkit.getWorld("world");
+                    if (world != null) {
+                        statLeaderboards.add(new StatLeaderboardManager(this, api, "playtime", "TEMPS DE JEU", new Location(world, 90.0, 90.0, 0.0), StatFormatters::playtime));
+                        statLeaderboards.add(new StatLeaderboardManager(this, api, "blocks_broken", "BLOCS CASSES", new Location(world, 100.0, 90.0, 0.0), StatFormatters::blocks));
+                        statLeaderboards.add(new StatLeaderboardManager(this, api, "distance", "DISTANCE PARCOURUE", new Location(world, 110.0, 90.0, 0.0), StatFormatters::distance));
+                        statLeaderboards.add(new StatLeaderboardManager(this, api, "fish", "PECHE", new Location(world, 120.0, 90.0, 0.0), StatFormatters::count));
+                        statLeaderboards.add(new StatLeaderboardManager(this, api, "mob_kills", "MOB KILLS", new Location(world, 130.0, 90.0, 0.0), StatFormatters::count));
+                        statLeaderboards.add(new StatLeaderboardManager(this, api, "npc_trades", "TRADES PNJ", new Location(world, 140.0, 90.0, 0.0), StatFormatters::count));
+                        statLeaderboards.add(new StatLeaderboardManager(this, api, "warden_kills", "WARDEN KILLS", new Location(world, 150.0, 90.0, 0.0), StatFormatters::count));
+                    }
+                    for (StatLeaderboardManager statLeaderboard : statLeaderboards) {
+                        statLeaderboard.startUpdateTask();
+                    }
                 }
             } catch (CoreCDI.ApiException e) {
                 getLogger().warning("Impossible de contacter l'API CDI2 : " + e.getMessage());
@@ -95,6 +127,12 @@ public class CitePlugin extends JavaPlugin {
         if (headLeaderboardManager != null) {
             headLeaderboardManager.stopUpdateTask();
         }
+        if (statBuffer != null) {
+            statBuffer.stop();
+        }
+        for (StatLeaderboardManager statLeaderboard : statLeaderboards) {
+            statLeaderboard.stopUpdateTask();
+        }
 
         // Désactiver proprement l'API NPC
         NpcApi.disable();
@@ -123,5 +161,9 @@ public class CitePlugin extends JavaPlugin {
 
     public HeadLeaderboardManager getHeadLeaderboardManager() {
         return headLeaderboardManager;
+    }
+
+    public StatBuffer getStatBuffer() {
+        return statBuffer;
     }
 }

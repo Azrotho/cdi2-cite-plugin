@@ -18,7 +18,7 @@ repositories {
 
 dependencies {
     paperweightDevelopmentBundle("io.papermc.paper:dev-bundle:1.21.11-R0.1-SNAPSHOT")
-    implementation 'fr.citedesiles:cdi2-core-plugin:1.0.0'
+    implementation 'fr.citedesiles:cdi2-core-plugin:1.1.0'
     implementation 'com.github.Eisi05:NpcApi-Paper:2.4.1'
 }
 

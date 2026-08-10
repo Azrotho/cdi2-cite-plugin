@@ -269,6 +269,10 @@ public class NpcInteractListener implements Listener {
 
                 // Succès de la transaction
                 Bukkit.getScheduler().runTask(plugin, () -> {
+                    // Comptabiliser le trade PNJ (une vente réussie = +1)
+                    if (plugin.getStatBuffer() != null) {
+                        plugin.getStatBuffer().add(player.getUniqueId(), "npc_trades", 1);
+                    }
                     player.sendMessage(Component.text("§aVendu " + finalQuantity + " x " + formatMaterialName(material.name()) + " pour " + formatStars(totalValue) + " ⭐ !", NamedTextColor.GREEN));
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
 

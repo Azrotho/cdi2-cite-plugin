@@ -8,6 +8,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
@@ -22,18 +23,37 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Function;
 
-public class HeadLeaderboardManager {
+/**
+ * Classement secondaire affiché par une {@link TextDisplay}, alimenté par une stat de l'API.
+ * Suit le même patron que {@link HeadLeaderboardManager} : rafraîchissement toutes les 30 s,
+ * fetch asynchrone + mise à jour synchrone de l'entité, déduplication par PersistentDataContainer.
+ */
+public class StatLeaderboardManager {
     private final CitePlugin plugin;
     private final CoreCDI api;
+    private final String statName;
+    private final String title;
+    private final Location location;
+    private final Function<Double, String> formatter;
+    private final int limit;
     private BukkitTask task;
     private final NamespacedKey key;
 
-    public HeadLeaderboardManager(CitePlugin plugin, CoreCDI api) {
+    public StatLeaderboardManager(CitePlugin plugin, CoreCDI api, String statName, String title, Location location, Function<Double, String> formatter) {
+        this(plugin, api, statName, title, location, formatter, 10);
+    }
+
+    public StatLeaderboardManager(CitePlugin plugin, CoreCDI api, String statName, String title, Location location, Function<Double, String> formatter, int limit) {
         this.plugin = plugin;
         this.api = api;
-        this.key = new NamespacedKey(plugin, "head_leaderboard_display");
+        this.statName = statName;
+        this.title = title;
+        this.location = location;
+        this.formatter = formatter;
+        this.limit = limit;
+        this.key = new NamespacedKey(plugin, "stat_leaderboard_" + statName);
     }
 
     public void startUpdateTask() {
@@ -54,18 +74,20 @@ public class HeadLeaderboardManager {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 List<Team> allTeams = api.getTeams();
-                Map<Integer, Integer> headCounts = api.getHeadCounts();
 
-                List<TeamHeadScore> scores = new ArrayList<>();
+                List<TeamStatScore> ranked = new ArrayList<>();
                 for (Team team : allTeams) {
-                    if (team.staff() != 1) {
-                        int count = headCounts.getOrDefault(team.id(), 0);
-                        scores.add(new TeamHeadScore(team, count));
+                    if (team.staff() == 1) continue;
+                    double value = api.getTeamStat(team.id(), statName);
+                    if (value > 0) {
+                        ranked.add(new TeamStatScore(team, value));
                     }
                 }
+                ranked.sort((a, b) -> Double.compare(b.value, a.value));
 
-                // Trier par nombre de têtes décroissant
-                scores.sort((a, b) -> Integer.compare(b.count, a.count));
+                List<TeamStatScore> scores = ranked.size() > limit
+                        ? new ArrayList<>(ranked.subList(0, limit))
+                        : ranked;
 
                 // Mettre à jour l'entité TextDisplay sur le thread principal
                 Bukkit.getScheduler().runTask(plugin, () -> {
@@ -76,19 +98,17 @@ public class HeadLeaderboardManager {
                 });
 
             } catch (Exception e) {
-                plugin.getLogger().warning("Erreur lors du chargement du classement des têtes : " + e.getMessage());
+                plugin.getLogger().warning("Erreur lors du chargement du classement " + title + " : " + e.getMessage());
             }
         });
     }
 
     private TextDisplay getOrCreateLeaderboardDisplay() {
-        World world = Bukkit.getWorld("world");
+        World world = location.getWorld();
         if (world == null) return null;
 
-        Location loc = new Location(world, 160.0, 90.0, 0.0);
-
         List<TextDisplay> existingDisplays = new ArrayList<>();
-        for (Entity entity : world.getNearbyEntities(loc, 5.0, 5.0, 5.0)) {
+        for (Entity entity : world.getNearbyEntities(location, 5.0, 5.0, 5.0)) {
             if (entity instanceof TextDisplay) {
                 if (entity.getPersistentDataContainer().has(key, PersistentDataType.STRING)) {
                     existingDisplays.add((TextDisplay) entity);
@@ -103,13 +123,13 @@ public class HeadLeaderboardManager {
                 existingDisplays.get(i).remove();
             }
         } else {
-            display = world.spawn(loc, TextDisplay.class);
+            display = world.spawn(location, TextDisplay.class);
             display.getPersistentDataContainer().set(key, PersistentDataType.STRING, "true");
         }
 
         display.setBillboard(Display.Billboard.FIXED);
         display.setShadowed(true);
-        display.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0));
+        display.setBackgroundColor(Color.fromARGB(100, 0, 0, 0));
 
         display.setTransformation(new Transformation(
             new Vector3f(0f, 0f, 0f),
@@ -121,20 +141,20 @@ public class HeadLeaderboardManager {
         return display;
     }
 
-    private Component buildLeaderboardComponent(List<TeamHeadScore> scores) {
-        Component title = Component.text("CLASSEMENT DES TETES", NamedTextColor.GOLD)
+    private Component buildLeaderboardComponent(List<TeamStatScore> scores) {
+        Component titleComponent = Component.text(title, NamedTextColor.GOLD)
                 .decorate(TextDecoration.BOLD);
         Component separator = Component.text("--------------------------", NamedTextColor.GRAY);
 
         Component builder = Component.text()
-                .append(title)
+                .append(titleComponent)
                 .append(Component.newline())
                 .append(separator)
                 .append(Component.newline())
                 .build();
 
         int rank = 1;
-        for (TeamHeadScore score : scores) {
+        for (TeamStatScore score : scores) {
             TextColor teamHexColor = TextColor.fromHexString(score.team.color());
             if (teamHexColor == null) teamHexColor = NamedTextColor.WHITE;
 
@@ -142,7 +162,7 @@ public class HeadLeaderboardManager {
                     .append(Component.text(rank + ". ", NamedTextColor.GRAY))
                     .append(Component.text("[" + score.team.tag() + "] ", teamHexColor).decorate(TextDecoration.BOLD))
                     .append(Component.text(score.team.name() + " - ", NamedTextColor.WHITE))
-                    .append(Component.text(score.count + " tête" + (score.count > 1 ? "s" : ""), NamedTextColor.AQUA))
+                    .append(Component.text(formatter.apply(score.value), NamedTextColor.AQUA))
                     .append(Component.newline())
                     .build();
 
@@ -153,13 +173,13 @@ public class HeadLeaderboardManager {
         return builder;
     }
 
-    private static class TeamHeadScore {
+    private static class TeamStatScore {
         final Team team;
-        final int count;
+        final double value;
 
-        TeamHeadScore(Team team, int count) {
+        TeamStatScore(Team team, double value) {
             this.team = team;
-            this.count = count;
+            this.value = value;
         }
     }
 }
